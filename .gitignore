@@ -1,0 +1,17 @@
+# 機密
+.env
+youtube_cookies.txt
+
+# yt-dlp 下載的原始字幕
+srt/
+
+# 生成的 HTML（由 cache/ 重建）
+output/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
