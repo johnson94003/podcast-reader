@@ -38,22 +38,17 @@ jobs:
       - name: Scan and process new videos
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          cd podcast_reader
-          python3 monitor.py
+        run: python3 monitor.py
 
       - name: Rebuild all HTML from cache
-        run: |
-          cd podcast_reader
-          python3 -c "from monitor import rebuild_all_html; rebuild_all_html()"
+        run: python3 -c "from monitor import rebuild_all_html; rebuild_all_html()"
 
       - name: Deploy to Netlify
         env:
           NETLIFY_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
-          if ls podcast_reader/output/*.html 2>/dev/null | head -1 | grep -q .; then
-            cd podcast_reader
+          if ls output/*.html 2>/dev/null | head -1 | grep -q .; then
             python3 deploy.py
           else
             echo "No HTML files in output/ — skipping deploy."
@@ -63,7 +58,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add podcast_reader/processed_videos.json podcast_reader/cache/ 2>/dev/null || true
+          git add processed_videos.json cache/ 2>/dev/null || true
           git diff --staged --quiet || (
             git commit -m "auto: process new podcast videos [skip ci]"
             git push
