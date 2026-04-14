@@ -9,7 +9,8 @@ from pathlib import Path
 
 def _get_cookie_args() -> list:
     """
-    CI 環境：若有 YOUTUBE_COOKIES_FILE 就用 --cookies，否則不加 cookie 參數。
+    CI 環境：若有 YOUTUBE_COOKIES_FILE 就用 --cookies；
+             沒有 cookie 時改用 iOS client 繞過 bot 偵測。
     本機環境：使用 --cookies-from-browser chrome。
     """
     cookies_file = os.getenv("YOUTUBE_COOKIES_FILE")
@@ -17,7 +18,8 @@ def _get_cookie_args() -> list:
         return ["--cookies", cookies_file]
     if not os.getenv("CI"):  # GitHub Actions 自動設定 CI=true
         return ["--cookies-from-browser", "chrome"]
-    return []  # CI 無 cookie 檔案：試試看，公開影片通常不需要
+    # CI 無 cookie：用 iOS client，通常能繞過 bot 偵測
+    return ["--extractor-args", "youtube:player_client=ios"]
 
 
 def _find_yt_dlp() -> str:

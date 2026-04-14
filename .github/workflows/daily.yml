@@ -8,6 +8,8 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write       # 允許 git push 回 repo
 
     steps:
       - name: Checkout repo
@@ -32,7 +34,7 @@ jobs:
             echo "YOUTUBE_COOKIES_FILE=youtube_cookies.txt" >> $GITHUB_ENV
             echo "Cookie file written."
           else
-            echo "No YOUTUBE_COOKIES secret — will try without cookies."
+            echo "No YOUTUBE_COOKIES secret — will try iOS client."
           fi
 
       - name: Scan and process new videos
