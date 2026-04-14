@@ -22,7 +22,7 @@ from translator import translate
 CHANNELS = [
     "https://www.youtube.com/@FlorisGierman",
 ]
-MAX_NEW_PER_RUN = 3        # 每次最多處理幾支，避免 API 費用過高
+MAX_NEW_PER_RUN = 1        # 每次只處理最新一支，控制 API 費用
 PLAYLIST_PEEK   = 10       # 每個頻道抓最新幾支來比對
 PROCESSED_PATH  = Path(__file__).parent / "processed_videos.json"
 OUTPUT_DIR      = Path(__file__).parent / "output"
