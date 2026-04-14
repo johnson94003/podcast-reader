@@ -588,3 +588,131 @@ def build_html(
 
     print(f"  ✓ HTML 輸出：{output_path}")
     return str(output_path)
+
+
+def build_index_html(
+    cache_dir: str = "cache",
+    output_dir: str = "output",
+) -> str:
+    """
+    掃描 cache/*.meta.json，生成 output/index.html 影片清單首頁。
+    依 upload_date 倒序排列（最新在最上面）。
+    """
+    cache_path  = Path(cache_dir)
+    output_path = Path(output_dir) / "index.html"
+    Path(output_dir).mkdir(exist_ok=True)
+
+    # 收集所有已處理影片的 meta
+    videos = []
+    for meta_file in sorted(cache_path.glob("*.meta.json")):
+        vid = meta_file.stem.replace(".meta", "")
+        html_file = Path(output_dir) / f"{vid}.html"
+        if not html_file.exists():
+            continue
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        videos.append({
+            "id":      vid,
+            "title":   meta.get("title", vid),
+            "channel": meta.get("channel", ""),
+        })
+
+    # 生成卡片 HTML
+    def card(v):
+        def esc(s):
+            return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return f"""    <a class="card" href="{v['id']}.html">
+      <div class="card-title">{esc(v['title'])}</div>
+      <div class="card-channel">{esc(v['channel'])}</div>
+    </a>"""
+
+    cards_html = "\n".join(card(v) for v in videos)
+    count = len(videos)
+
+    html = f"""<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Podcast Reader</title>
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f0e8;
+      color: #2c2c2c;
+      min-height: 100vh;
+    }}
+    header {{
+      background: #fffdf8;
+      border-bottom: 1px solid #ddd5c4;
+      padding: 24px 20px 20px;
+      text-align: center;
+    }}
+    header h1 {{
+      font-size: 22px;
+      font-weight: 700;
+      color: #2d6a4f;
+      letter-spacing: -0.3px;
+    }}
+    header p {{
+      font-size: 13px;
+      color: #aaa;
+      margin-top: 4px;
+    }}
+    .list {{
+      max-width: 680px;
+      margin: 28px auto;
+      padding: 0 16px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }}
+    .card {{
+      display: block;
+      background: white;
+      border-radius: 14px;
+      padding: 18px 20px;
+      text-decoration: none;
+      color: inherit;
+      border: 2px solid transparent;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }}
+    .card:hover {{
+      border-color: #2d6a4f;
+      box-shadow: 0 4px 16px rgba(45,106,79,0.10);
+    }}
+    .card-title {{
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #1a1a1a;
+    }}
+    .card-channel {{
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 5px;
+    }}
+    .empty {{
+      text-align: center;
+      color: #aaa;
+      font-size: 14px;
+      padding: 60px 0;
+    }}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎙 Podcast Reader</h1>
+    <p>共 {count} 支雙語逐字稿</p>
+  </header>
+  <div class="list">
+{"    <p class='empty'>還沒有影片，請等待自動更新。</p>" if not videos else cards_html}
+  </div>
+</body>
+</html>"""
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"  ✓ 首頁輸出：{output_path}（{count} 支影片）")
+    return str(output_path)

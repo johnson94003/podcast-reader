@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from builder import build_html
+from builder import build_html, build_index_html
 from downloader import download_srt, fetch_metadata, _find_yt_dlp
 from segmenter import parse_srt
 from translator import translate
@@ -119,6 +119,7 @@ def rebuild_all_html():
         rebuilt += 1
     if rebuilt:
         print(f"  已重建 {rebuilt} 支影片的 HTML")
+    build_index_html()  # 同步更新首頁清單
 
 
 # ── 主程式 ────────────────────────────────────────────────
