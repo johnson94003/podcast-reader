@@ -715,30 +715,50 @@ def build_html(
 
     async function loadProgress() {{
       if (!sbUser) return;
+      // 取出所有 rows，合併 read_segments（處理舊版零散資料）
       const {{ data: rows, error }} = await sb.from('reading_progress')
         .select('read_segments,last_segment')
-        .eq('video_id', VIDEO_ID)
-        .order('updated_at', {{ ascending: false }})
-        .limit(1);
+        .eq('video_id', VIDEO_ID);
       if (error || !rows || rows.length === 0) return;
-      const data = rows[0];
-      readSet = new Set((data.read_segments || []).map(Number));
+
+      const merged = new Set();
+      let lastSeg = null;
+      for (const row of rows) {{
+        (row.read_segments || []).forEach(i => merged.add(Number(i)));
+        if (lastSeg === null && row.last_segment != null) lastSeg = row.last_segment;
+      }}
+      readSet = merged;
       readSet.forEach(i => document.getElementById('seg-'+i)?.classList.add('read'));
-      if (data.last_segment != null) {{
-        const el = document.getElementById('seg-' + data.last_segment);
+      if (lastSeg != null) {{
+        const el = document.getElementById('seg-' + lastSeg);
         if (el) setTimeout(() => el.scrollIntoView({{behavior:'smooth',block:'center'}}), 600);
       }}
     }}
 
+    // markRead：更新記憶體 + 防抖後寫入 Supabase
+    let _saveTimer = null;
     function markRead(idx) {{
       if (!sbUser) return;
       readSet.add(idx);
       document.getElementById('seg-'+idx)?.classList.add('read');
-      sb.from('reading_progress').upsert({{
-        user_id: sbUser.id, video_id: VIDEO_ID,
-        read_segments: [...readSet], last_segment: idx,
+      clearTimeout(_saveTimer);
+      _saveTimer = setTimeout(() => _saveProgress(idx), 1500);
+    }}
+
+    async function _saveProgress(lastIdx) {{
+      if (!sbUser) return;
+      // 先刪除這個影片的所有舊 rows，再整筆存入（確保只有一筆乾淨的資料）
+      await sb.from('reading_progress')
+        .delete()
+        .eq('user_id', sbUser.id)
+        .eq('video_id', VIDEO_ID);
+      await sb.from('reading_progress').insert({{
+        user_id: sbUser.id,
+        video_id: VIDEO_ID,
+        read_segments: [...readSet],
+        last_segment: lastIdx,
         updated_at: new Date().toISOString()
-      }}, {{ onConflict: 'user_id,video_id' }});
+      }});
     }}
 
     function clearReadUI() {{
