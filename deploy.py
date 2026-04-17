@@ -1,127 +1,98 @@
 #!/usr/bin/env python3
 """
-deploy.py — 把 output/ 的 HTML 部署到 Netlify
-
+deploy.py — 把 output/ 的 HTML 部署到 GitHub Pages（gh-pages 分支）
 
 用法：
-  python3 deploy.py               # 部署所有 HTML
-  python3 deploy.py VIDEO_ID      # 只確認某支影片存在後部署
-
-需要在 .env 裡設定：
-  NETLIFY_TOKEN=你的token
-  NETLIFY_SITE_ID=（第一次跑完後自動寫入）
+  python3 deploy.py    # 部署所有 HTML
 """
 
-import io
 import json
-import os
+import subprocess
 import sys
-import zipfile
 from pathlib import Path
 
-import requests
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).parent / ".env", override=True)
-
-NETLIFY_TOKEN   = os.getenv("NETLIFY_TOKEN", "")
-NETLIFY_SITE_ID = os.getenv("NETLIFY_SITE_ID", "")
-OUTPUT_DIR      = Path(__file__).parent / "output"
-ENV_PATH        = Path(__file__).parent / ".env"
+ROOT       = Path(__file__).parent
+OUTPUT_DIR = ROOT / "output"
+CACHE_DIR  = ROOT / "cache"
 
 
-def _headers():
-    return {"Authorization": f"Bearer {NETLIFY_TOKEN}"}
+def get_remote_url() -> str:
+    result = subprocess.run(
+        ["git", "remote", "get-url", "origin"],
+        capture_output=True, text=True, cwd=ROOT,
+    )
+    return result.stdout.strip()
 
 
-def _build_zip() -> bytes:
-    """把 output/ 所有 HTML 打包成 zip（in memory）"""
-    buf = io.BytesIO()
-    files = list(OUTPUT_DIR.glob("*.html"))
-    if not files:
-        raise FileNotFoundError("output/ 裡沒有 HTML 檔案")
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for f in files:
-            zf.write(f, f.name)
-            print(f"  打包：{f.name}")
-    buf.seek(0)
-    return buf.read()
-
-
-def _save_site_id(site_id: str):
-    """把 NETLIFY_SITE_ID 寫回 .env，下次不用重建站台"""
-    content = ENV_PATH.read_text(encoding="utf-8") if ENV_PATH.exists() else ""
-    if "NETLIFY_SITE_ID" in content:
-        lines = [
-            f"NETLIFY_SITE_ID={site_id}" if l.startswith("NETLIFY_SITE_ID=") else l
-            for l in content.splitlines()
-        ]
-        ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+def get_pages_url(remote_url: str) -> str:
+    """https://github.com/USER/REPO.git  →  https://USER.github.io/REPO"""
+    url = remote_url.rstrip("/").removesuffix(".git")
+    if "github.com/" in url:
+        slug = url.split("github.com/")[-1]
+    elif "github.com:" in url:
+        slug = url.split("github.com:")[-1]
     else:
-        with open(ENV_PATH, "a", encoding="utf-8") as f:
-            f.write(f"\nNETLIFY_SITE_ID={site_id}\n")
+        return ""
+    parts = slug.split("/")
+    if len(parts) == 2:
+        return f"https://{parts[0]}.github.io/{parts[1]}"
+    return ""
 
 
 def deploy():
-    if not NETLIFY_TOKEN:
-        print("❌  找不到 NETLIFY_TOKEN，請先在 .env 設定")
+    html_files = list(OUTPUT_DIR.glob("*.html"))
+    if not html_files:
+        print("❌  output/ 裡沒有 HTML 檔案，請先執行 main.py 或 monitor.py")
         sys.exit(1)
 
-    print("\n📦  打包 output/ ...")
-    zip_data = _build_zip()
+    remote_url = get_remote_url()
+    if not remote_url:
+        print("❌  無法取得 git remote URL，請確認已設定 git remote origin")
+        sys.exit(1)
 
-    site_id = NETLIFY_SITE_ID
+    pages_url = get_pages_url(remote_url)
 
-    # ── 第一次：建立新站台 ────────────────────────────────
-    if not site_id:
-        print("\n🌐  第一次部署，建立新站台...")
-        r = requests.post(
-            "https://api.netlify.com/api/v1/sites",
-            headers=_headers(),
-            json={"name": "podcast-reader"},
-        )
-        if r.status_code not in (200, 201):
-            print(f"❌  建立站台失敗：{r.status_code} {r.text}")
-            sys.exit(1)
-        site_id = r.json()["id"]
-        site_url = r.json()["ssl_url"] or r.json()["url"]
-        _save_site_id(site_id)
-        print(f"  ✓ 站台建立：{site_url}")
+    print(f"\n📦  準備部署到 GitHub Pages（共 {len(html_files)} 個檔案）...")
 
-    # ── 部署 zip ──────────────────────────────────────────
-    print(f"\n🚀  部署中...")
-    r = requests.post(
-        f"https://api.netlify.com/api/v1/sites/{site_id}/deploys",
-        headers={**_headers(), "Content-Type": "application/zip"},
-        data=zip_data,
+    # 在 output/ 裡建立暫時的 git repo，force push 到 gh-pages 分支
+    def run(cmd):
+        subprocess.run(cmd, cwd=OUTPUT_DIR, check=True, capture_output=True)
+
+    run(["git", "init"])
+    run(["git", "config", "user.name", "deploy-script"])
+    run(["git", "config", "user.email", "deploy@local"])
+    run(["git", "add", "."])
+    run(["git", "commit", "-m", "deploy [skip ci]"])
+
+    print("🚀  推送到 gh-pages 分支...")
+    result = subprocess.run(
+        ["git", "push", "--force", remote_url, "HEAD:gh-pages"],
+        cwd=OUTPUT_DIR, capture_output=True, text=True,
     )
-    if r.status_code not in (200, 201):
-        print(f"❌  部署失敗：{r.status_code} {r.text[:300]}")
+    if result.returncode != 0:
+        print(f"❌  Push 失敗：\n{result.stderr}")
         sys.exit(1)
-
-    data     = r.json()
-    site_url = data.get("ssl_url") or data.get("url") or ""
-    deploy_url = data.get("deploy_ssl_url") or data.get("deploy_url") or ""
 
     print(f"\n✅  部署完成！")
-    print(f"   網站：{site_url}")
-    print(f"   此次：{deploy_url}\n")
+    if pages_url:
+        print(f"   網站：{pages_url}")
+        print(f"   （若首次啟用，請到 GitHub → Settings → Pages → 選 gh-pages 分支）\n")
 
-    # 印出所有影片的直接連結（含標題）
-    html_files = sorted(OUTPUT_DIR.glob("*.html"))
-    if html_files and site_url:
-        print("📺  影片連結：")
-        meta_dir = Path(__file__).parent / "cache"
-        for f in html_files:
-            vid = f.stem
-            meta_path = meta_dir / f"{vid}.meta.json"
-            if meta_path.exists():
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
-                label = f"{meta.get('title', vid)}  ／  {meta.get('channel', '')}"
-            else:
-                label = vid
-            print(f"   {site_url}/{f.name}")
-            print(f"   └─ {label}")
+    # 印出影片連結
+    print("📺  影片連結：")
+    for f in sorted(html_files):
+        vid = f.stem
+        if vid == "index":
+            continue
+        meta_path = CACHE_DIR / f"{vid}.meta.json"
+        if meta_path.exists():
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            label = f"{meta.get('title', vid)}  ／  {meta.get('channel', '')}"
+        else:
+            label = vid
+        if pages_url:
+            print(f"   {pages_url}/{f.name}")
+        print(f"   └─ {label}")
     print()
 
 
