@@ -45,13 +45,18 @@ jobs:
       - name: Rebuild all HTML from cache
         run: python3 -c "from monitor import rebuild_all_html; rebuild_all_html()"
 
-      - name: Deploy to Netlify
-        env:
-          NETLIFY_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      - name: Deploy to GitHub Pages
         run: |
           if ls output/*.html 2>/dev/null | head -1 | grep -q .; then
-            python3 deploy.py
+            cd output
+            git init
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "deploy: update podcast pages [skip ci]"
+            git push --force \
+              https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git \
+              HEAD:gh-pages
           else
             echo "No HTML files in output/ — skipping deploy."
           fi
