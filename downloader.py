@@ -15,7 +15,11 @@ def _get_cookie_args() -> list:
     """
     cookies_file = os.getenv("YOUTUBE_COOKIES_FILE")
     if cookies_file and Path(cookies_file).exists():
-        return ["--cookies", cookies_file]
+        # cookie 檔 + no-check-formats（跳過 n-challenge 格式驗證，字幕仍可正常下載）
+        return [
+            "--cookies", cookies_file,
+            "--no-check-formats",
+        ]
     if not os.getenv("CI"):  # GitHub Actions 自動設定 CI=true
         return ["--cookies-from-browser", "chrome"]
     # CI 無 cookie：用 iOS client，通常能繞過 bot 偵測
