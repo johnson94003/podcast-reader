@@ -396,10 +396,49 @@ def build_html(
 
     /* ── Mobile ── */
     @media (max-width: 640px) {{
-      #yt-wrap {{ width: 100px; height: 56px; }}
+      /* Player bar：折成兩排 */
+      #player-bar {{
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 8px;
+      }}
+      /* 第一排：縮圖 + 標題時間 */
+      #yt-wrap {{ width: 80px; height: 45px; }}
+      #now-playing {{ flex: 1; min-width: 0; }}
+      #now-text {{ display: none; }}   /* 手機隱藏「正在播放」文字 */
+      /* 第二排：語言切換 + 連播 + 登入，撐滿整行 */
+      #lang-toggle {{
+        order: 10;
+        flex: 1;
+      }}
+      #auto-btn {{
+        order: 11;
+        font-size: 11px;
+        padding: 5px 8px;
+      }}
+      #auth-widget {{
+        order: 12;
+      }}
+      #auth-btn {{
+        font-size: 11px;
+        padding: 5px 9px;
+      }}
+      .lang-btn {{
+        flex: 1;
+        text-align: center;
+        padding: 5px 6px;
+        font-size: 11px;
+      }}
+      /* 段落文字欄 */
       .seg-body {{ grid-template-columns: 1fr; }}
       body.mode-both .zh {{ filter: blur(3px); }}
       body.mode-both .zh.zh-visible {{ filter: none; }}
+      /* 登入面板：全寬靠左 */
+      #auth-panel {{
+        right: auto;
+        left: 0;
+        width: calc(100vw - 24px);
+      }}
     }}
   </style>
 </head>
