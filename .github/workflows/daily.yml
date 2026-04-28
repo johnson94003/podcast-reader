@@ -38,14 +38,17 @@ jobs:
           fi
 
       - name: Scan and process new videos
+        continue-on-error: true   # 失敗不中斷，由 email 通報
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python3 monitor.py
 
       - name: Rebuild all HTML from cache
+        continue-on-error: true
         run: python3 -c "from monitor import rebuild_all_html; rebuild_all_html()"
 
       - name: Deploy to GitHub Pages
+        continue-on-error: true
         run: |
           if ls output/*.html 2>/dev/null | head -1 | grep -q .; then
             cd output
@@ -62,6 +65,7 @@ jobs:
           fi
 
       - name: Commit updated data back to repo
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -73,6 +77,7 @@ jobs:
           )
 
       - name: Build email subject and body
+        if: always()   # 前面不管成功失敗都要寄信
         run: |
           python3 - <<'PYEOF'
           import json
@@ -127,6 +132,7 @@ jobs:
           echo "EMAIL_SUBJECT=$(cat /tmp/email_subject.txt)" >> $GITHUB_ENV
 
       - name: Send email notification
+        if: always()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
