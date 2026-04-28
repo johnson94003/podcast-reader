@@ -112,6 +112,9 @@ def rebuild_all_html():
         if cache_file.stem.endswith(".meta"):
             continue
         vid = cache_file.stem
+        # 跳過非影片的 JSON（如 last_run.json）：沒有對應 meta.json 就不是影片
+        if not (CACHE_DIR / f"{vid}.meta.json").exists():
+            continue
         meta_file = CACHE_DIR / f"{vid}.meta.json"
         meta = json.loads(meta_file.read_text(encoding="utf-8")) if meta_file.exists() else {}
         segs = json.loads(cache_file.read_text(encoding="utf-8"))
