@@ -233,16 +233,30 @@ def effective_end(i):
 ### daily.yml（.github/workflows/）
 - 每天 UTC 02:00（台灣 10:00）自動執行
 - 步驟：checkout → install → write cookies → monitor.py → rebuild HTML → deploy gh-pages → commit cache 回 main → **寄信通知**
+- 所有步驟加 `continue-on-error: true`，email 步驟加 `if: always()`
+  → workflow 永遠以「成功」結束，GitHub 不會發原生失敗通知信
+  → 出錯只由自訂 email 通報
 - 寄信用 `dawidd6/action-send-mail@v3`，透過 Gmail SMTP
 - 信件主旨範例：
   - 沒新影片：`Podcast Reader 2026-04-28 — 今天沒有新影片`
   - 有新影片：`Podcast Reader 2026-04-28 — 新增 1 支影片 ✅`
   - 失敗：`Podcast Reader 2026-04-28 — 處理失敗 ❌`
+- commit cache 回 main 時先 `git pull --rebase` 避免 push 衝突
+
+### rebuild_all_html() 注意事項
+- `cache/*.json` 只處理有對應 `.meta.json` 的檔案
+- `last_run.json` 等非影片 JSON 會被自動跳過（無 meta.json）
+- 若新增其他非影片 JSON 到 cache，不需特別處理
+
+### processed_videos.json 注意事項
+- 本機處理的影片必須手動確認有加進去，否則 CI 每次都會重新嘗試處理
+- 本機跑完 `main.py` 後，`processed_videos.json` 不會自動更新，需手動加入 video_id
 
 ### YouTube Cookie（CI 環境）
 - CI 環境：讀取 `YOUTUBE_COOKIES` secret 寫成 `youtube_cookies.txt`
 - `downloader.py` 偵測 `YOUTUBE_COOKIES_FILE` 環境變數，使用 `--cookies` + `--no-check-formats`
 - `--no-check-formats` 是關鍵：繞過 n-challenge，避免 bot 偵測
+- Cookie 有效期約數週，過期會出現 n-challenge 警告 → 需重新匯出並更新 `YOUTUBE_COOKIES` secret
 
 ---
 
