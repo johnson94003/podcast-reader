@@ -9,7 +9,7 @@ jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
-      contents: write       # 允許 git push 回 repo
+      contents: write
 
     steps:
       - name: Checkout repo
@@ -70,3 +70,69 @@ jobs:
             git commit -m "auto: process new podcast videos [skip ci]"
             git push
           )
+
+      - name: Build email subject and body
+        run: |
+          python3 - <<'PYEOF'
+          import json
+          from pathlib import Path
+
+          summary_path = Path("cache/last_run.json")
+          if not summary_path.exists():
+              subject = "Podcast Reader — 今日執行異常"
+              body = (
+                  "last_run.json 不存在，monitor.py 可能提早失敗。\n"
+                  "請到 GitHub Actions 查看 log。"
+              )
+          else:
+              s = json.loads(summary_path.read_text())
+              run_date = s.get("date", "")
+
+              if s["status"] == "no_new":
+                  subject = f"Podcast Reader {run_date} — 今天沒有新影片"
+                  body = (
+                      f"✅ 掃描完成，頻道今天沒有新影片。\n\n"
+                      f"網站：https://johnson94003.github.io/podcast-reader"
+                  )
+              elif s["status"] == "processed":
+                  videos = s["processed"]
+                  lines = "\n".join(
+                      f"▶ {v['title']}\n   {v['url']}" for v in videos
+                  )
+                  remaining = s.get("remaining", 0)
+                  rem_note = (
+                      f"\n\n還有 {remaining} 支影片等待明天繼續處理。"
+                      if remaining > 0 else ""
+                  )
+                  subject = f"Podcast Reader {run_date} — 新增 {len(videos)} 支影片 ✅"
+                  body = (
+                      f"今天成功翻譯並部署以下影片：\n\n"
+                      f"{lines}{rem_note}\n\n"
+                      f"網站：https://johnson94003.github.io/podcast-reader"
+                  )
+              else:
+                  failed = s.get("failed", [])
+                  lines = "\n".join(f"✗ {v['title']}" for v in failed)
+                  subject = f"Podcast Reader {run_date} — 處理失敗 ❌"
+                  body = (
+                      f"以下影片處理失敗：\n\n{lines}\n\n"
+                      f"請到 GitHub Actions 查看詳細 log。"
+                  )
+
+          Path("/tmp/email_subject.txt").write_text(subject, encoding="utf-8")
+          Path("/tmp/email_body.txt").write_text(body, encoding="utf-8")
+          print("Subject:", subject)
+          PYEOF
+          echo "EMAIL_SUBJECT=$(cat /tmp/email_subject.txt)" >> $GITHUB_ENV
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: ${{ env.EMAIL_SUBJECT }}
+          to: a0973271958@gmail.com
+          from: Podcast Reader <${{ secrets.GMAIL_USER }}>
+          body: file:///tmp/email_body.txt
