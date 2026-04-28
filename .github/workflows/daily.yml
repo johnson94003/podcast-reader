@@ -68,6 +68,7 @@ jobs:
           git add processed_videos.json cache/ 2>/dev/null || true
           git diff --staged --quiet || (
             git commit -m "auto: process new podcast videos [skip ci]"
+            git pull --rebase origin main
             git push
           )
 
