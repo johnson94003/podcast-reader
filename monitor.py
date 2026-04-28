@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 from builder import build_html, build_index_html
@@ -27,6 +28,7 @@ PLAYLIST_PEEK   = 10       # 每個頻道抓最新幾支來比對
 PROCESSED_PATH  = Path(__file__).parent / "processed_videos.json"
 OUTPUT_DIR      = Path(__file__).parent / "output"
 CACHE_DIR       = Path(__file__).parent / "cache"
+LAST_RUN_PATH   = CACHE_DIR / "last_run.json"
 
 
 # ── 已處理清單 ────────────────────────────────────────────
@@ -145,6 +147,7 @@ def main():
 
     if not new_videos:
         print("\n✅  沒有新影片，結束\n")
+        _save_summary(status="no_new", new_videos=[], processed_videos=[])
         return
 
     print(f"\n共 {len(new_videos)} 支新影片")
@@ -155,18 +158,54 @@ def main():
 
     # 每次最多處理 MAX_NEW_PER_RUN 支（新→舊順序）
     to_process = new_videos[:MAX_NEW_PER_RUN]
-    if len(new_videos) > MAX_NEW_PER_RUN:
+    remaining  = new_videos[MAX_NEW_PER_RUN:]
+    if remaining:
         print(f"本次處理前 {MAX_NEW_PER_RUN} 支，其餘下次繼續\n")
 
-    succeeded = 0
+    succeeded_videos = []
+    failed_videos    = []
     for video in to_process:
         ok = process_video(video)
         if ok:
             processed.add(video["id"])
-            succeeded += 1
+            succeeded_videos.append(video)
+        else:
+            failed_videos.append(video)
 
     save_processed(processed)
-    print(f"\n📊  本次：{succeeded}/{len(to_process)} 支成功\n")
+    print(f"\n📊  本次：{len(succeeded_videos)}/{len(to_process)} 支成功\n")
+    _save_summary(
+        status="processed" if succeeded_videos else "failed",
+        new_videos=new_videos,
+        processed_videos=succeeded_videos,
+        failed_videos=failed_videos,
+        remaining=remaining,
+    )
+
+
+def _save_summary(
+    status: str,
+    new_videos: list,
+    processed_videos: list,
+    failed_videos: list | None = None,
+    remaining: list | None = None,
+):
+    """把本次執行結果寫成 JSON，供 GitHub Actions 寄信用。"""
+    CACHE_DIR.mkdir(exist_ok=True)
+    summary = {
+        "date":        str(date.today()),
+        "status":      status,          # "no_new" | "processed" | "failed"
+        "new_found":   len(new_videos),
+        "processed":   [{"id": v["id"], "title": v["title"], "url": v["url"]}
+                        for v in processed_videos],
+        "failed":      [{"id": v["id"], "title": v["title"], "url": v["url"]}
+                        for v in (failed_videos or [])],
+        "remaining":   len(remaining or []),
+    }
+    LAST_RUN_PATH.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(f"  ✓ 執行摘要已儲存：{LAST_RUN_PATH}")
 
 
 if __name__ == "__main__":
