@@ -23,7 +23,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install anthropic yt-dlp python-dotenv requests
+        run: pip install anthropic yt-dlp python-dotenv requests youtube-transcript-api
 
       - name: Write YouTube cookies (if secret exists)
         env:

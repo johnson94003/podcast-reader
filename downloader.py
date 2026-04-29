@@ -57,6 +57,53 @@ def extract_video_id(url: str) -> str:
     raise ValueError(f"無法從網址擷取 video ID：{url}")
 
 
+def _download_via_transcript_api(video_id: str, srt_dir: str) -> str | None:
+    """
+    使用 youtube-transcript-api 下載字幕，轉成 SRT 格式。
+    不需要 cookie，可繞過 n-challenge。
+    回傳 srt_path 或 None。
+    """
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+    except ImportError:
+        print("  youtube-transcript-api 未安裝，跳過")
+        return None
+
+    def _to_srt_time(seconds: float) -> str:
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        ms = int((seconds % 1) * 1000)
+        return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+    try:
+        api = YouTubeTranscriptApi()
+        # 優先抓 en-orig，其次 en
+        for lang in ("en-orig", "en"):
+            try:
+                transcript = api.fetch(video_id, languages=[lang])
+                srt_lines = []
+                for i, entry in enumerate(transcript, 1):
+                    start = entry.start
+                    end   = start + entry.duration
+                    srt_lines += [
+                        str(i),
+                        f"{_to_srt_time(start)} --> {_to_srt_time(end)}",
+                        entry.text,
+                        "",
+                    ]
+                suffix = "en-orig" if lang == "en-orig" else "en"
+                srt_path = Path(srt_dir) / f"{video_id}.{suffix}.srt"
+                srt_path.write_text("\n".join(srt_lines), encoding="utf-8")
+                print(f"  ✓ transcript-api 字幕（{lang}）：{srt_path}")
+                return str(srt_path)
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"  transcript-api 失敗：{e}")
+    return None
+
+
 def download_srt(url: str, srt_dir: str = "srt") -> tuple[str, str]:
     """
     下載 YouTube 英文字幕。
@@ -109,6 +156,12 @@ def download_srt(url: str, srt_dir: str = "srt") -> tuple[str, str]:
         if Path(path).exists():
             print(f"  ✓ 自動字幕：{path}")
             return video_id, path
+
+    # 3. 最終備援：youtube-transcript-api（不需要 cookie，繞過 n-challenge）
+    print("  yt-dlp 失敗，改用 youtube-transcript-api...")
+    srt_path = _download_via_transcript_api(video_id, srt_dir)
+    if srt_path:
+        return video_id, srt_path
 
     raise FileNotFoundError(
         f"找不到英文字幕。yt-dlp 輸出：\n{result.stdout}\n{result.stderr}"
