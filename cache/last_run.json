@@ -1,14 +1,14 @@
 {
-  "date": "2026-06-19",
+  "date": "2026-06-20",
   "status": "failed",
-  "new_found": 7,
+  "new_found": 8,
   "processed": [],
   "failed": [
     {
-      "id": "YLowH6xs4d4",
-      "title": "Why Running Slower Is the Fastest Way to Improve as a Recreational Runner",
-      "url": "https://www.youtube.com/watch?v=YLowH6xs4d4"
+      "id": "OFelJ8TRRVw",
+      "title": "Molly Seidel's Advice to Improve Your Running | The Extramilest Show",
+      "url": "https://www.youtube.com/watch?v=OFelJ8TRRVw"
     }
   ],
-  "remaining": 6
+  "remaining": 7
 }
