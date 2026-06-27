@@ -1,14 +1,14 @@
 {
-  "date": "2026-06-26",
+  "date": "2026-06-27",
   "status": "failed",
-  "new_found": 8,
+  "new_found": 9,
   "processed": [],
   "failed": [
     {
-      "id": "OFelJ8TRRVw",
-      "title": "Molly Seidel's Advice to Improve Your Running | The Extramilest Show",
-      "url": "https://www.youtube.com/watch?v=OFelJ8TRRVw"
+      "id": "9iMO_lsLf80",
+      "title": "How to Keep Improving as a Runner Every Year (Even If You Miss Workouts)",
+      "url": "https://www.youtube.com/watch?v=9iMO_lsLf80"
     }
   ],
-  "remaining": 7
+  "remaining": 8
 }
