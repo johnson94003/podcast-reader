@@ -1,14 +1,14 @@
 {
-  "date": "2026-08-11",
+  "date": "2026-08-12",
   "status": "failed",
-  "new_found": 9,
+  "new_found": 10,
   "processed": [],
   "failed": [
     {
-      "id": "X9Vf0Lp2aLg",
-      "title": "What the World's Best Runners Keep Saying About Getting Better",
-      "url": "https://www.youtube.com/watch?v=X9Vf0Lp2aLg"
+      "id": "bnGvQOsP5LE",
+      "title": "Build Unstoppable Momentum in Your Running",
+      "url": "https://www.youtube.com/watch?v=bnGvQOsP5LE"
     }
   ],
-  "remaining": 8
+  "remaining": 9
 }
