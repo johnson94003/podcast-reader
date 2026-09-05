@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Podcast Reader</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f0e8;
+      color: #2c2c2c;
+      min-height: 100vh;
+    }
+    header {
+      background: #fffdf8;
+      border-bottom: 1px solid #ddd5c4;
+      padding: 24px 20px 20px;
+      text-align: center;
+      position: relative;
+    }
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #2d6a4f;
+      letter-spacing: -0.3px;
+    }
+    header p {
+      font-size: 13px;
+      color: #aaa;
+      margin-top: 4px;
+    }
+    .list {
+      max-width: 680px;
+      margin: 28px auto;
+      padding: 0 16px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .card {
+      display: block;
+      background: white;
+      border-radius: 14px;
+      padding: 18px 20px;
+      text-decoration: none;
+      color: inherit;
+      border: 2px solid transparent;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .card:hover {
+      border-color: #2d6a4f;
+      box-shadow: 0 4px 16px rgba(45,106,79,0.10);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #1a1a1a;
+    }
+    .card-channel {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 5px;
+    }
+    .empty {
+      text-align: center;
+      color: #aaa;
+      font-size: 14px;
+      padding: 60px 0;
+    }
+    /* ── Auth widget ── */
+    #auth-widget {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+    }
+    #auth-btn {
+      background: #eee7d9;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #555;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    #auth-btn:hover { background: #e0d8cc; }
+    #auth-btn.on { background: #d4edda; color: #2d6a4f; font-weight: 600; }
+    #auth-panel {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 36px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 16px;
+      width: 240px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      z-index: 100;
+      text-align: left;
+    }
+    #auth-panel input {
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      padding: 7px 10px;
+      font-size: 13px;
+      margin-bottom: 8px;
+      font-family: inherit;
+      outline: none;
+    }
+    #auth-panel input:focus { border-color: #2d6a4f; }
+    #auth-panel button {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 7px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    #auth-login-btn { background: #2d6a4f; color: white; }
+    #auth-login-btn:hover { background: #235c42; }
+    #auth-logout-btn { background: #f0ece4; color: #555; margin-top: 8px; }
+    #auth-logout-btn:hover { background: #e0dcd4; }
+    #auth-msg { font-size: 12px; color: #888; margin-top: 8px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎙 Podcast Reader</h1>
+    <p>共 5 支雙語逐字稿</p>
+    <div id="auth-widget">
+      <button id="auth-btn" onclick="toggleAuthPanel()">登入</button>
+      <div id="auth-panel">
+        <div id="auth-form-area">
+          <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
+          <input id="auth-pw" type="password" placeholder="密碼（6 位以上）" autocomplete="current-password">
+          <button id="auth-login-btn" onclick="doLogin()">登入 / 註冊</button>
+        </div>
+        <div id="auth-user-area" style="display:none">
+          <button id="auth-logout-btn" onclick="doLogout()">登出</button>
+        </div>
+        <div id="auth-msg"></div>
+      </div>
+    </div>
+  </header>
+  <div class="list">
+    <a class="card" href="HDg4NAEKQO8.html">
+      <div class="card-title">You’re Doing Zone 2 Wrong (Even If You Think You’re Not) | Scott Johnston Round 2</div>
+      <div class="card-channel">Floris Gierman</div>
+    </a>
+    <a class="card" href="LFlvor6ZHdY.html">
+      <div class="card-title">Daniel Pink: "Drive: The Surprising Truth About What Motivates Us"</div>
+      <div class="card-channel">GBH Forum Network</div>
+    </a>
+    <a class="card" href="b_uFHVH-QSE.html">
+      <div class="card-title">Lucy Charles-Barclay: The Price of Being #1</div>
+      <div class="card-channel">FRODENO GOING MENTAL</div>
+    </a>
+    <a class="card" href="en4w0-RpWgk.html">
+      <div class="card-title">Sara Hall's Advice to Race Faster, For Non-Elites | Extramilest Show #125</div>
+      <div class="card-channel">Floris Gierman</div>
+    </a>
+    <a class="card" href="vAqQPDXtq5k.html">
+      <div class="card-title">How to Build an Unstoppable Aerobic Engine (Even If Starting From Zero) | Scott Johnston</div>
+      <div class="card-channel">Floris Gierman</div>
+    </a>
+  </div>
+  <script>
+    const SB_URL = 'https://bxrcntccrglfxfyabcrc.supabase.co';
+    const SB_KEY = 'sb_publishable_w7wT56HTe8E-s3gABzuvew_7FsDKHSD';
+    let sb = null, sbUser = null;
+
+    window.addEventListener('load', async () => {
+      const { createClient } = window.supabase;
+      sb = createClient(SB_URL, SB_KEY);
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) { sbUser = user; renderAuth(); }
+      sb.auth.onAuthStateChange((_, session) => {
+        sbUser = session?.user ?? null;
+        renderAuth();
+      });
+    });
+
+    function toggleAuthPanel() {
+      const p = document.getElementById('auth-panel');
+      p.style.display = p.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function renderAuth() {
+      const btn  = document.getElementById('auth-btn');
+      const form = document.getElementById('auth-form-area');
+      const user = document.getElementById('auth-user-area');
+      const msg  = document.getElementById('auth-msg');
+      if (sbUser) {
+        btn.textContent = '✓ 已登入';
+        btn.classList.add('on');
+        form.style.display = 'none';
+        user.style.display = 'block';
+        msg.textContent = sbUser.email;
+      } else {
+        btn.textContent = '登入';
+        btn.classList.remove('on');
+        form.style.display = 'block';
+        user.style.display = 'none';
+        msg.textContent = '';
+      }
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('auth-email').value.trim();
+      const pw    = document.getElementById('auth-pw').value;
+      const msg   = document.getElementById('auth-msg');
+      msg.textContent = '登入中...';
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error) {
+        const { error: e2 } = await sb.auth.signUp({ email, password: pw });
+        msg.textContent = e2 ? '失敗：' + error.message : '已建立帳號，請重新登入';
+      } else {
+        document.getElementById('auth-panel').style.display = 'none';
+      }
+    }
+
+    async function doLogout() {
+      await sb.auth.signOut();
+      document.getElementById('auth-panel').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
