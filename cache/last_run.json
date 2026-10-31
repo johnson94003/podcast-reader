@@ -1,13 +1,13 @@
 {
-  "date": "2026-10-30",
+  "date": "2026-10-31",
   "status": "failed",
   "new_found": 10,
   "processed": [],
   "failed": [
     {
-      "id": "ixGNmi7zB5s",
-      "title": "Running Injury Specialist's Guide to Treating Common Injuries",
-      "url": "https://www.youtube.com/watch?v=ixGNmi7zB5s"
+      "id": "F7BK0DhoyA8",
+      "title": "Jakob Ingebrigtsen Explains the Norwegian Training Method",
+      "url": "https://www.youtube.com/watch?v=F7BK0DhoyA8"
     }
   ],
   "remaining": 9
