@@ -1,13 +1,13 @@
 {
-  "date": "2026-11-06",
+  "date": "2026-11-07",
   "status": "failed",
   "new_found": 10,
   "processed": [],
   "failed": [
     {
-      "id": "F7BK0DhoyA8",
-      "title": "Jakob Ingebrigtsen Explains the Norwegian Training Method",
-      "url": "https://www.youtube.com/watch?v=F7BK0DhoyA8"
+      "id": "72J5bmeBis8",
+      "title": "Red Light Therapy: The Science Behind the Hype",
+      "url": "https://www.youtube.com/watch?v=72J5bmeBis8"
     }
   ],
   "remaining": 9
